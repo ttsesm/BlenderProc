@@ -3,8 +3,10 @@ import json
 import math
 import os
 
+import numpy as np
+
 import bpy
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 
 from src.loader.LoaderInterface import LoaderInterface
 from src.utility.Utility import Utility
@@ -109,6 +111,45 @@ class SuncgLoader(LoaderInterface):
                 elif node["type"] == "Box":
                     self._load_box(node, material_adjustments, transform, parent)
         self._rename_materials()
+        self._center_house()
+        
+    def _center_house(self):
+        """
+        By default the house is loaded in a different position than the origin of the plane
+
+        This moves the house in plane origin
+        """
+        obs = [o for o in bpy.data.objects
+            if o.type == 'MESH']
+#            if o.type == 'OBJECT']
+
+#        for o in obs:
+#            print(o.type)
+            
+        print("Obs content: {}".format(obs))
+            
+        # put them in the center of the plane
+        # TODO: maybe better to do that later on in the script in its own function see, center_scenes()
+        coords = []
+        for o in obs:
+            coords.extend(o.matrix_world @ Vector(b) for b in o.bound_box) 
+
+        x, y, z = np.array(coords).reshape((-1, 3)).T
+
+        global_xy_trans = Vector(
+            (
+                (x.min() + x.max()) / 2 , 
+                (y.min() + y.max()) / 2
+                )
+            )
+
+
+        for o in obs:      
+            if o.parent in obs:
+                continue
+#            print("testttttt")
+#            print(o.name)
+            o.matrix_world.translation.xy -= global_xy_trans
 
     def _rename_materials(self):
         """

@@ -46,6 +46,7 @@ class Pipeline:
         self._remove_all_objects()
         self._remove_orphan_data()
         self._remove_custom_properties()
+        self._remove_collections()
 
     def _remove_all_objects(self):
         """ Removes all objects of the current scene """
@@ -71,8 +72,13 @@ class Pipeline:
         for data_structure in data_structures:
             for block in data_structure:
                 # If no one uses this block => remove it
-                if block.users == 0:
-                    data_structure.remove(block)
+#                if block.users == 0:
+                data_structure.remove(block)
+                
+    def _hard_remove_orphan_data(self):
+        """ Remove all data blocks the hard way. """
+        while bpy.ops.outliner.orphans_purge() != {'CANCELLED'}:
+            continue
 
     def _remove_custom_properties(self):
         """ Remove all custom properties registered at global entities like the scene. """
@@ -83,6 +89,15 @@ class Pipeline:
         """ Cleans up temporary directory """
         if self._do_clean_up_temp_dir:
             shutil.rmtree(self._temp_dir)
+            
+    def _remove_collections(self):
+        """ Cleans up all previous created collections """
+        # clear collections
+        for c in bpy.context.scene.collection.children:
+            bpy.context.scene.collection.children.unlink(c)
+        
+        for c in bpy.data.collections:
+            bpy.data.collections.remove(c)
 
     def run(self):
         """ Runs each module and measuring their execution time. """

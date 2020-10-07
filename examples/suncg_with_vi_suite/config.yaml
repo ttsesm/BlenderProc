@@ -1,0 +1,29 @@
+# Args: <cam_file> <obj_file> <output_dir>
+{
+  "version": 3,
+  "setup": {
+    "blender_install_path": "/home/ttsesm/Development/BlenderProc/blender/",
+    "pip": [
+      "h5py"
+    ]
+  },
+  "modules": [
+    {
+      "module": "main.Initializer",
+      "config": {
+        "global": {
+          "output_dir": "examples/suncg_with_vi_suite/output"
+        }
+      }
+    },
+    {
+      "module": "loader.SuncgLoader",
+      "config": {
+        "path": "/home/ttsesm/Development/datasets/suncg/house/001ef7e63573bd8fecf933f10fa4491b/house.json"
+      }
+    },
+    {
+      "module": "lighting.SuncgLighting",
+    }
+  ]
+}
