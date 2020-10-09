@@ -17,6 +17,13 @@
       }
     },
     {
+      "module": "manipulators.WorldManipulator",
+      "config": {
+        "cf_bg_surface_color": [ 1, 1, 1, 1 ],
+        "cf_bg_surface_strength": 100
+      }
+    },
+    {
       "module": "loader.SuncgLoader",
       "config": {
         "path": "/home/ttsesm/Development/datasets/suncg/house/001ef7e63573bd8fecf933f10fa4491b/house.json"

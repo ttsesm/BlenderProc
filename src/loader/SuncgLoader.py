@@ -5,6 +5,8 @@ import os
 
 import numpy as np
 
+import bmesh
+
 import bpy
 from mathutils import Matrix, Vector
 
@@ -111,9 +113,11 @@ class SuncgLoader(LoaderInterface):
                 elif node["type"] == "Box":
                     self._load_box(node, material_adjustments, transform, parent)
         self._rename_materials()
-        self._center_house()
+        self._center_scene()
+#        self._subdivide_objects()
+        print(bpy.data.objects["Room#0_0"].type)
         
-    def _center_house(self):
+    def _center_scene(self):
         """
         By default the house is loaded in a different position than the origin of the plane
 
@@ -121,15 +125,10 @@ class SuncgLoader(LoaderInterface):
         """
         obs = [o for o in bpy.data.objects
             if o.type == 'MESH']
-#            if o.type == 'OBJECT']
-
-#        for o in obs:
-#            print(o.type)
             
-        print("Obs content: {}".format(obs))
+#        print("Obs content: {}".format(obs))
             
         # put them in the center of the plane
-        # TODO: maybe better to do that later on in the script in its own function see, center_scenes()
         coords = []
         for o in obs:
             coords.extend(o.matrix_world @ Vector(b) for b in o.bound_box) 
@@ -147,9 +146,89 @@ class SuncgLoader(LoaderInterface):
         for o in obs:      
             if o.parent in obs:
                 continue
-#            print("testttttt")
-#            print(o.name)
             o.matrix_world.translation.xy -= global_xy_trans
+            
+    def _subdivide_objects(self):
+        """
+        By default the house is loaded with objects having different size of faces
+
+        This subdivides faces with big area or long edges
+        """
+        
+        obs = [o for o in bpy.data.objects
+            if o.type == 'MESH']
+            
+        for obj in obs:
+            me = obj.data
+            # New bmesh
+            bm = bmesh.new()
+            # load the mesh
+            bm.from_mesh(me)
+            
+#            cuts = 1
+#            ### collapse short edges
+#            edges_len_average = 0
+#            edges_count = 0
+#            shortest_edge = 10000
+#            for edge in bm.edges:
+#                if True:#edge.is_boundary:
+#                    edges_count += 1
+#                    length = edge.calc_length()
+#        #            print(length)
+#                    edges_len_average += length
+#                    if length < shortest_edge:
+#                        shortest_edge = length
+#                        
+#            edges_len_average = edges_len_average/edges_count
+#            
+##                    print("Total edges: {}".format(len(bm.edges)))
+##                    print("Shortest edge: {}".format(shortest_edge))
+##                    print("Average edge: {}".format(edges_len_average))
+#         
+#            subdivide_edges = []
+#            for edge in bm.edges:
+#                if shortest_edge <= 0:
+#                    return
+#                cut_count = int(edge.calc_length()/shortest_edge)*cuts
+#        #        cut_count = cuts
+#                if cut_count <= 0:
+#                    cut_count = 0
+#        #        if not edge.is_boundary:
+#                subdivide_edges.append([edge,cut_count])
+#                
+#            grouped_edges = {}
+#                
+#            for edge, cut in subdivide_edges:
+#                grouped_edges.setdefault(cut, []).append(edge)
+#                
+#                
+#        #    subdivide_edges = []
+#        #    for edge in bm.edges:
+#        #        if edge.calc_length() > 0.5:
+#        #            
+#        #            cut_count = int(edge.calc_length()/shortest_edge)*cuts
+#        #            print(cut_count)
+
+#        #            if cut_count <= 0:
+#        #                cut_count = 0
+#        ##        if not edge.is_boundary:
+#        #            subdivide_edges.append([edge,cut_count])
+#                    
+##                    print("Edges to subdivide: {}\n".format(len(subdivide_edges)))
+#        #    print(grouped)
+#            
+##                    bmesh.ops.subdivide_edges(bm, edges=list(np.array(subdivide_edges)[:,0]), cuts=8, use_grid_fill=True)
+#            for cut in grouped_edges:
+#                print(cut)
+#                print(grouped_edges[cut])
+#                bmesh.ops.subdivide_edges(bm, edges=grouped_edges[cut], cuts=cut, use_grid_fill=True)
+            
+            
+            bmesh.ops.subdivide_edges(bm, edges=bm.edges, cuts=8, use_grid_fill=True)
+
+            # Write back to the mesh
+            bm.to_mesh(me)
+            me.update()
 
     def _rename_materials(self):
         """
