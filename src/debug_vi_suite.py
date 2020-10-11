@@ -32,17 +32,22 @@ def toggle_hide (lst, mode=True):
 if __name__ == "__main__":
     # Make sure the current script directory is in PATH, so we can load other python modules
     working_dir = os.path.dirname(bpy.context.space_data.text.filepath) + "/../"
+    
+#    print("Working dir: {}".format(working_dir))
 
     if not working_dir in sys.path:
         sys.path.append(working_dir)
 
     # Add path to custom packages inside the blender main directory
+    # TODO: fix this for some reason is not working, thus I have to hard set the packages path
     if sys.platform == "linux" or sys.platform == "linux2":
         packages_path = os.path.abspath(os.path.join(os.path.dirname(sys.executable), "custom-python-packages"))
     elif sys.platform == "darwin":
         packages_path = os.path.abspath(os.path.join(os.path.dirname(sys.executable), "..", "Resources", "custom-python-packages"))
     else:
         raise Exception("This system is not supported yet: {}".format(sys.platform))
+#    print("Packages path: {}".format(packages_path))
+#    packages_path = "/home/theodore/Development/BlenderProc/blender/blender-2.83.6-linux64/custom-python-packages/"
     sys.path.append(packages_path)
 
     # Delete all loaded models inside src/, as they are cached inside blender
@@ -71,22 +76,25 @@ if __name__ == "__main__":
         pipeline.run()
         
         
+#        rooms = [o for o in bpy.data.objects
+#            if 'Room' in o.name]
+            
         rooms = [o for o in bpy.data.objects
-            if 'Room' in o.name]
+            if "type" in o and o["type"] == 'Room']
             
-#        print("Room objects: {}".format(rooms))
+        print("Room objects: {}".format(rooms))
         
-        for i, room in enumerate(rooms):
-            rooms2hide = rooms[:i]+rooms[i+1:]
+#        for i, room in enumerate(rooms):
+#            rooms2hide = rooms[:i]+rooms[i+1:]
             
-            toggle_hide(room.children, False)
-            room.hide_set(False)
-#            toggle_hide(room, False)
-            
-            for room2hide in rooms2hide:
-                toggle_hide(room2hide.children)
-                room2hide.hide_set(True)
-#                toggle_hide(room2hide)
+#            toggle_hide(room.children, False)
+#            room.hide_set(False)
+##            toggle_hide(room, False)
+#            
+#            for room2hide in rooms2hide:
+#                toggle_hide(room2hide.children)
+#                room2hide.hide_set(True)
+##                toggle_hide(room2hide)
             
         
     finally:

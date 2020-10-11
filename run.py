@@ -48,7 +48,7 @@ if "custom_blender_path" not in setup_config:
     # Determine configured version
     # right new only support blender-2.83.2
     major_version = "2.83"
-    minor_version = "2"
+    minor_version = "7"
     blender_version = "blender-{}.{}".format(major_version, minor_version)
     if platform == "linux" or platform == "linux2":
         blender_version += "-linux64"

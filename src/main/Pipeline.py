@@ -44,7 +44,8 @@ class Pipeline:
     def _cleanup(self):
         """ Cleanup the scene by removing objects, orphan data and custom properties """
         self._remove_all_objects()
-        self._remove_orphan_data()
+#        self._remove_orphan_data()
+        self._hard_remove_orphan_data()
         self._remove_custom_properties()
         self._remove_collections()
 

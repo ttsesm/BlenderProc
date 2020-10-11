@@ -115,7 +115,7 @@ class SuncgLoader(LoaderInterface):
         self._rename_materials()
         self._center_scene()
 #        self._subdivide_objects()
-        print(bpy.data.objects["Room#0_0"].type)
+#        print(bpy.data.objects["Room#0_0"].type)
         
     def _center_scene(self):
         """

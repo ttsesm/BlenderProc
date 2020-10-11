@@ -217,6 +217,10 @@ class SuncgLighting(Module):
         for obj in bpy.context.scene.objects:
             if "modelId" in obj:
                 obj_id = obj["modelId"]
+                
+#                print("ModelId: {}".format(obj_id))
+#                print("Name: {}\n".format(obj.name))
+#                print("Object parent name: {}\n".format(obj.parent))
 
                 # In the case of the lamp
                 if obj_id in self.lights:

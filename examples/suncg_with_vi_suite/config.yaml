@@ -2,7 +2,7 @@
 {
   "version": 3,
   "setup": {
-    "blender_install_path": "/home/ttsesm/Development/BlenderProc/blender/",
+    "blender_install_path": "/home/theodore/Development/BlenderProc/blender/",
     "pip": [
       "h5py"
     ]
@@ -26,7 +26,7 @@
     {
       "module": "loader.SuncgLoader",
       "config": {
-        "path": "/home/ttsesm/Development/datasets/suncg/house/001ef7e63573bd8fecf933f10fa4491b/house.json"
+        "path": "/home/theodore/Development/datasets/suncg/house/001ef7e63573bd8fecf933f10fa4491b/house.json"
       }
     },
     {
