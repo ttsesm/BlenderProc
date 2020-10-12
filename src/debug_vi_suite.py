@@ -75,26 +75,33 @@ if __name__ == "__main__":
         pipeline = Pipeline(config_path, [], working_dir, avoid_rendering=True)
         pipeline.run()
         
-        
+#        # find rooms by name
 #        rooms = [o for o in bpy.data.objects
 #            if 'Room' in o.name]
             
+        # find rooms by type    
         rooms = [o for o in bpy.data.objects
             if "type" in o and o["type"] == 'Room']
             
-        print("Room objects: {}".format(rooms))
+#        print("Room objects: {}".format(rooms))
         
-#        for i, room in enumerate(rooms):
-#            rooms2hide = rooms[:i]+rooms[i+1:]
-            
+        for i, room in enumerate(rooms):
+            rooms2hide = rooms[:i]+rooms[i+1:]
+
+            room.hide_children = False
 #            toggle_hide(room.children, False)
 #            room.hide_set(False)
 ##            toggle_hide(room, False)
 #            
-#            for room2hide in rooms2hide:
+            for room2hide in rooms2hide:
+#                bpy.context.scene.objects["Room#0_0"].hide_children = True
+#                bpy.data.objects["Room#0_0"].hide_children = True
+                room2hide.hide_children = True
 #                toggle_hide(room2hide.children)
 #                room2hide.hide_set(True)
 ##                toggle_hide(room2hide)
+
+# bpy.data.objects["Room#0_0"].hide_children()
             
         
     finally:
