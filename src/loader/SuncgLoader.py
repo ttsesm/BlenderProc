@@ -113,7 +113,13 @@ class SuncgLoader(LoaderInterface):
                 elif node["type"] == "Box":
                     self._load_box(node, material_adjustments, transform, parent)
         self._rename_materials()
+        
+        # Re-locate the objects to center of the plane
         self._center_scene()
+        
+        # Add the hiding/unhiding property to all objects
+        Utility.AddHidingProperty()
+        
 #        self._subdivide_objects()
 #        print(bpy.data.objects["Room#0_0"].type)
         
