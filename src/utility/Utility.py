@@ -283,44 +283,21 @@ class Utility:
         """
         def __init__(self):
             
-############# Method 1 everything inside the init
             def hide_children(obj, context):
                 obj.hide_set(obj.hide_children)
                 for o in obj.children:
                     o.hide_children = obj.hide_children
                     
-#            # function to draw the checkbox in the editor footer      
-#            def _draw(obj, context):
-#                layout = obj.layout
-#                ob = context.object
-#                layout.prop(ob, "hide_children")
+            # function to draw the checkbox in the editor footer      
+            def draw(obj, context):
+                layout = obj.layout
+                ob = context.object
+                layout.prop(ob, "hide_children")
                 
             bpy.types.Object.hide_children = BoolProperty(update=hide_children)
             
 #            # A checkbox to set the property is added to the text editor footer for testing. (optional)
 #            bpy.types.TEXT_HT_footer.append(draw)
-
-
-
-            
-############## Method 2 by calling the class functions
-#            bpy.types.Object.hide_children = BoolProperty(update=self.hide_children)
-#            
-##            # A checkbox to set the property is added to the text editor footer for testing. (optional)
-##            bpy.types.TEXT_HT_footer.append(self._draw)
-#        
-#        def hide_children(self, obj, context):
-#            obj.hide_set(obj.hide_children)
-#            for o in obj.children:
-#                o.hide_children = obj.hide_children
-#        
-#        
-#        
-#        # function to draw the checkbox in the editor footer      
-#        def _draw(self, obj, context):
-#            layout = obj.layout
-#            ob = context.object
-#            layout.prop(ob, "hide_children")
 
     @staticmethod
     def build_provider(name, parameters):
