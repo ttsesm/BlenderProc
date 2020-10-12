@@ -53,6 +53,8 @@ class Pipeline:
         """ Removes all objects of the current scene """
         # Select all
         for obj in bpy.context.scene.objects:
+            if obj.hide_get() == True:
+                obj.hide_set(False)
             obj.select_set(True)
         # Delete selection
         bpy.ops.object.delete()
