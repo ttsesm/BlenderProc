@@ -388,6 +388,6 @@ def dump(obj):
     for obj in objects:
         obj.select_set(True)    
        
-       for attr in dir(obj):
-           if hasattr( obj, attr ):
-               print( "obj.%s = %s" % (attr, getattr(obj, attr)))
+        for attr in dir(obj):
+            if hasattr( obj, attr ):
+                print( "obj.%s = %s" % (attr, getattr(obj, attr)))
