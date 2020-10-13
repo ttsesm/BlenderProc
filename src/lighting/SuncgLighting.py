@@ -213,6 +213,22 @@ class SuncgLighting(Module):
                     self._collection_of_mats["ceiling"][mat_name] = m.material
 
     def run(self):
+        # TODO: this needs to be changed
+        rooms_with_lights = []
+
+        # Find all rooms that do not have light sources
+        for obj in bpy.context.scene.objects:
+            if "modelId" in obj:
+                obj_id = obj["modelId"]
+                
+                if obj_id in self.lights:
+                    
+                    if obj.parent.name not in rooms_with_lights:
+                        print("Object parent name: {}\n".format(obj.parent.name))
+                        rooms_with_lights.append(obj.parent.name)
+                    
+#        print("Rooms with lights: {}".format(rooms_with_lights))
+
         # Make some objects emit lights
         for obj in bpy.context.scene.objects:
             if "modelId" in obj:
@@ -231,5 +247,6 @@ class SuncgLighting(Module):
 #                    self._make_window_emissive(obj)
 
                 # Also make ceilings slightly emit light
-                if obj.name.startswith("Ceiling#"):
+                if obj.name.startswith("Ceiling#") and obj.parent.name not in rooms_with_lights:
+#                if obj.name.startswith("Ceiling#"):
                     self._make_ceiling_emissive(obj)
