@@ -374,3 +374,20 @@ def duplicate_objects(objects):
     duplicates = bpy.context.selected_objects
     bpy.ops.object.select_all(action='DESELECT')
     return duplicates
+
+def dump(obj):
+    """
+    Dumps an object's properties and methods in the console output
+    
+    :param objects: an object or a list of objects to be duplicated
+    """
+    if not isinstance(obj, list):
+        objects = [obj]
+        
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in objects:
+        obj.select_set(True)    
+       
+       for attr in dir(obj):
+           if hasattr( obj, attr ):
+               print( "obj.%s = %s" % (attr, getattr(obj, attr)))
