@@ -40,8 +40,7 @@ class SuncgLoader(LoaderInterface):
         self._collection_of_loaded_objs = {}
         # there are only two types of materials, textures and diffuse
         self._collection_of_loaded_mats = {"texture": {}, "diffuse": {}}
-        LabelIdMapping.assign_mapping(Utility.resolve_path(os.path.join('resources', 'id_mappings', 
-            'nyu_idset.csv')))
+        LabelIdMapping.assign_mapping(Utility.resolve_path(os.path.join('resources', 'id_mappings', 'nyu_idset.csv')))
 
     def run(self):
         with open(Utility.resolve_path(self.house_path), "r") as f:

@@ -224,7 +224,7 @@ class SuncgLighting(Module):
                 if obj_id in self.lights:
                     
                     if obj.parent.name not in rooms_with_lights:
-                        print("Object parent name: {}\n".format(obj.parent.name))
+#                        print("Object parent name: {}\n".format(obj.parent.name))
                         rooms_with_lights.append(obj.parent.name)
                     
 #        print("Rooms with lights: {}".format(rooms_with_lights))
