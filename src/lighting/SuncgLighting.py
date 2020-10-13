@@ -226,9 +226,9 @@ class SuncgLighting(Module):
                 if obj_id in self.lights:
                     self._make_lamp_emissive(obj, self.lights[obj_id])
 
-                # Make the windows emit light
-                if obj_id in self.windows:
-                    self._make_window_emissive(obj)
+#                # Make the windows emit light
+#                if obj_id in self.windows:
+#                    self._make_window_emissive(obj)
 
                 # Also make ceilings slightly emit light
                 if obj.name.startswith("Ceiling#"):
