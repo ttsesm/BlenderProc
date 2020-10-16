@@ -3,11 +3,6 @@ import os
 import bpy
 import sys
 
-from src.utility.Utility import Utility
-from src.utility.LabelIdMapping import LabelIdMapping
-import src.utility.BlenderUtility
-
-
 def toggle_hide (lst, mode=True):
 
     children_list = []    
@@ -35,10 +30,11 @@ def toggle_hide (lst, mode=True):
             
 def material_mapping(obj, type):
     for m in obj.material_slots:
-        print("Material name: {}".format(m.name))
+#        print("Material name: {}".format(m.name))
 
-        obj.active_material = m.material
-        o = obj.active_material
+#        obj.active_material = m.material
+#        o = obj.active_material
+        o = m.material
         o.vi_params.mattype = '1' # set material to be a light sensor so that we calculate radiance on their vertices/faces
 
         if o.use_nodes == True:
@@ -57,6 +53,8 @@ def material_mapping(obj, type):
                 o.vi_params.radcolmenu = '0' # set the "VI-Suite Material --> Colour type"
                 o.vi_params.radct = 4700 # set the "VI-Suite Material --> Temperature"
                 o.vi_params.radintensity = 75.0 # set the "VI-Suite Material --> Intensity"
+            elif type == 'mirror':
+                o.vi_params.radmatmenu = '4' # set the "VI-Suite Material --> LiVi Radiance type"
             else:
                 o.vi_params.radmatmenu = '0' # set the "VI-Suite Material --> LiVi Radiance type"
             
@@ -69,13 +67,68 @@ def material_mapping(obj, type):
                 o.vi_params.radcolour = o.node_tree.nodes["Principled BSDF"].inputs["Subsurface Color"].default_value[0:3]
             else:                                    
                 o.vi_params.radcolour = o.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value[0:3] # set the "VI-Suite Material --> Material Reflectance"
-                
+            
+            # this might cause issues since for some radiance type materials these values are not set
             o.vi_params.radrough = o.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value # set the "VI-Suite Material --> Roughness"
             o.vi_params.radspec = o.node_tree.nodes["Principled BSDF"].inputs["Specular"].default_value  # set the "VI-Suite Material --> Specularity"
         else:
+            # TODO: this might need some better arrangement
+            if type == 'window':
+                o.vi_params.radmatmenu = '1' # set the "VI-Suite Material --> LiVi Radiance type"
+            elif type == 'lamp' and "emission" in o.name.lower():
+                o.vi_params.radmatmenu = '5' # set the "VI-Suite Material --> LiVi Radiance type"
+                o.vi_params.radcolmenu = '0' # set the "VI-Suite Material --> Colour type"
+                o.vi_params.radct = 4700 # set the "VI-Suite Material --> Temperature"
+                o.vi_params.radintensity = 75.0 # set the "VI-Suite Material --> Intensity"
+            # This is redundant, but adding it for a completion aspect
+            elif type == 'ceiling' and "emission" in o.name.lower():
+                o.vi_params.radmatmenu = '5' # set the "VI-Suite Material --> LiVi Radiance type"
+                o.vi_params.radcolmenu = '0' # set the "VI-Suite Material --> Colour type"
+                o.vi_params.radct = 4700 # set the "VI-Suite Material --> Temperature"
+                o.vi_params.radintensity = 75.0 # set the "VI-Suite Material --> Intensity"
+            elif type == 'mirror':
+                o.vi_params.radmatmenu = '4' # set the "VI-Suite Material --> LiVi Radiance type"
+            else:
+                o.vi_params.radmatmenu = '0' # set the "VI-Suite Material --> LiVi Radiance type"
+            
             o.vi_params.radrough = o.roughness
             o.vi_params.radspec = o.specular_intensity
             o.vi_params.radcolour = o.diffuse_color # set the "VI-Suite Material --> Material Reflectance"
+            
+def create_vi_suite_node_structure():
+    # this might be redundant
+    bpy.context.scene.use_nodes = True
+    
+    # tree
+    ng = bpy.data.node_groups.new('rad_sim', 'ViN')
+    
+    # nodes
+    location_node = ng.nodes.new(type="No_Loc")
+    location_node.location = (0, 0)
+    
+    geometry_node = ng.nodes.new(type="No_Li_Geo")
+    geometry_node.location = (230, 140)
+    geometry_node.cpoint = '1'
+    
+    context_node = ng.nodes.new(type="No_Li_Con")
+#    ng.nodes["LiVi Context"].skyprog = '4'
+    context_node.skyprog = '4'
+    context_node.location = (210, -120)
+
+    simulation_node = ng.nodes.new(type="No_Li_Sim")
+    simulation_node.location = (410, 70)
+    
+    export_node = ng.nodes.new(type="No_CSV")
+    export_node.location = (610, 0)
+    
+    # links
+    ng.links.new(location_node.outputs[0], context_node.inputs[0])
+    ng.links.new(geometry_node.outputs[0], simulation_node.inputs[0])
+    ng.links.new(context_node.outputs[0], simulation_node.inputs[1])
+    ng.links.new(simulation_node.outputs[0], export_node.inputs[0])
+    
+    return ng
+
             
 
 if __name__ == "__main__":
@@ -105,6 +158,9 @@ if __name__ == "__main__":
             del sys.modules[module]
 
     from src.main.Pipeline import Pipeline
+    from src.utility.Utility import Utility
+    from src.utility.LabelIdMapping import LabelIdMapping
+    import src.utility.BlenderUtility
 
     config_path = "examples/suncg_with_vi_suite/config.yaml"
 
@@ -136,9 +192,14 @@ if __name__ == "__main__":
             if "type" in o and o["type"] == 'Room']
             
 #        print("Room objects: {}".format(rooms))
+
+        bpy.ops.wm.save_as_mainfile(filepath="/home/ttsesm/Desktop/blender_tests/inline_test.blend")
+        node_tree = create_vi_suite_node_structure()
         
         if rooms:
             for i, room in enumerate(rooms):
+                if i == 0:
+                    continue
                 # find non active rooms
                 rooms2hide = rooms[:i]+rooms[i+1:]
 
@@ -156,7 +217,14 @@ if __name__ == "__main__":
                 for obj in room.children:
                     material_mapping(obj, LabelIdMapping.id_label_map[obj["category_id"]])
             
-            
+                override = {'node': bpy.data.node_groups[node_tree.name].nodes['LiVi Context']}
+                bpy.ops.node.liexport(override, 'INVOKE_DEFAULT')
+                override = {'node': bpy.data.node_groups[node_tree.name].nodes['LiVi Geometry']}
+                bpy.ops.node.ligexport(override, 'INVOKE_DEFAULT')
+                override = {'node': bpy.data.node_groups[node_tree.name].nodes['LiVi Simulation']}
+                bpy.ops.node.livicalc(override, 'INVOKE_DEFAULT')
+#                override = {'node': bpy.data.node_groups[node_tree.name].nodes['VI CSV Export'], 'filename': "tessstttt"}
+#                bpy.ops.node.csvexport(override, 'INVOKE_DEFAULT')
         
     finally:
         # Revert back to previous view
