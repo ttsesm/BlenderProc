@@ -131,6 +131,7 @@ class SuncgLoader(LoaderInterface):
         obs = [o for o in bpy.data.objects
             if o.type == 'MESH']
             
+            
 #        print("Obs content: {}".format(obs))
             
         # put them in the center of the plane

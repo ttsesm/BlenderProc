@@ -2,6 +2,12 @@
 import os
 import bpy
 import sys
+import bmesh
+
+import numpy as np
+import itertools
+import pickle
+import re
 
 def toggle_hide (lst, mode=True):
 
@@ -29,6 +35,9 @@ def toggle_hide (lst, mode=True):
             toggle_hide (child)
             
 def material_mapping(obj, type):
+    
+    lightFaces = []
+    
     for m in obj.material_slots:
 #        print("Material name: {}".format(m.name))
 
@@ -47,12 +56,24 @@ def material_mapping(obj, type):
                 o.vi_params.radcolmenu = '0' # set the "VI-Suite Material --> Colour type"
                 o.vi_params.radct = 4700 # set the "VI-Suite Material --> Temperature"
                 o.vi_params.radintensity = 75.0 # set the "VI-Suite Material --> Intensity"
+                
+                for i, face in enumerate( obj.data.polygons ):
+                    if o.name == obj.material_slots[face.material_index].name:
+                        lightFaces.append( i )
+                
             # This is redundant, but adding it for a completion aspect
             elif type == 'ceiling' and "emission" in o.name.lower():
                 o.vi_params.radmatmenu = '5' # set the "VI-Suite Material --> LiVi Radiance type"
                 o.vi_params.radcolmenu = '0' # set the "VI-Suite Material --> Colour type"
                 o.vi_params.radct = 4700 # set the "VI-Suite Material --> Temperature"
                 o.vi_params.radintensity = 75.0 # set the "VI-Suite Material --> Intensity"
+                
+                for i, face in enumerate( obj.data.polygons ):
+#                    print("o.name: {}".format(o.name))
+#                    print("m[ face.material_index ].name: {}".format(m[ face.material_index ].name))
+                    if o.name == obj.material_slots[face.material_index].name:
+                        lightFaces.append( i )
+                        
             elif type == 'mirror':
                 o.vi_params.radmatmenu = '4' # set the "VI-Suite Material --> LiVi Radiance type"
             else:
@@ -80,12 +101,22 @@ def material_mapping(obj, type):
                 o.vi_params.radcolmenu = '0' # set the "VI-Suite Material --> Colour type"
                 o.vi_params.radct = 4700 # set the "VI-Suite Material --> Temperature"
                 o.vi_params.radintensity = 75.0 # set the "VI-Suite Material --> Intensity"
+                
+                for i, face in enumerate( obj.data.polygons ):
+                    if o.name == obj.material_slots[face.material_index].name:
+                        lightFaces.append( i )
+                
             # This is redundant, but adding it for a completion aspect
             elif type == 'ceiling' and "emission" in o.name.lower():
                 o.vi_params.radmatmenu = '5' # set the "VI-Suite Material --> LiVi Radiance type"
                 o.vi_params.radcolmenu = '0' # set the "VI-Suite Material --> Colour type"
                 o.vi_params.radct = 4700 # set the "VI-Suite Material --> Temperature"
                 o.vi_params.radintensity = 75.0 # set the "VI-Suite Material --> Intensity"
+                
+                for i, face in enumerate( obj.data.polygons ):
+                    if o.name == obj.material_slots[face.material_index].name:
+                        lightFaces.append( i )
+                
             elif type == 'mirror':
                 o.vi_params.radmatmenu = '4' # set the "VI-Suite Material --> LiVi Radiance type"
             else:
@@ -94,6 +125,23 @@ def material_mapping(obj, type):
             o.vi_params.radrough = o.roughness
             o.vi_params.radspec = o.specular_intensity
             o.vi_params.radcolour = o.diffuse_color # set the "VI-Suite Material --> Material Reflectance"
+            
+    me = obj.data
+    # New bmesh
+    bm = bmesh.new()
+    # load the mesh
+    bm.from_mesh(me)
+    bm.faces.ensure_lookup_table()
+    lightFacesCoords = []
+    for f in lightFaces:
+##        print(obj.matrix_world @ obj.data.polygons[f].center)
+##        bm.faces[2].calc_center_bounds()
+        coords = obj.matrix_world @ bm.faces[f].calc_center_bounds()
+#        print("{:.10f}, {:.10f}, {:.10f}".format(coords[0], coords[1], coords[2]))
+##        print(bm.faces[f].calc_center_bounds())
+        lightFacesCoords.append([coords[0], coords[1], coords[2]])
+            
+    return lightFaces, lightFacesCoords
             
 def create_vi_suite_node_structure():
     # this might be redundant
@@ -108,7 +156,7 @@ def create_vi_suite_node_structure():
     
     geometry_node = ng.nodes.new(type="No_Li_Geo")
     geometry_node.location = (230, 140)
-    geometry_node.cpoint = '1'
+    geometry_node.cpoint = '0' # set to 1 for vertices
     
     context_node = ng.nodes.new(type="No_Li_Con")
 #    ng.nodes["LiVi Context"].skyprog = '4'
@@ -128,6 +176,70 @@ def create_vi_suite_node_structure():
     ng.links.new(simulation_node.outputs[0], export_node.inputs[0])
     
     return ng
+
+def export_simulation(node, filepath, lightObjectFaces=None):
+
+    resstring = ''
+    resnode = node.outputs['Results out'].links[0].from_node
+    rl = resnode['reslists']
+    zrl = list(zip(*rl))
+
+    if len(set(zrl[0])) > 1 and node.animated:
+        resstring = ''.join(['{} {},'.format(r[2], r[3]) for r in rl if r[0] == 'All']) + '\n'
+        metriclist = list(zip(*[r.split() for ri, r in enumerate(zrl[4]) if zrl[0][ri] == 'All']))
+
+    else:
+        resstring = ''.join(['{} {} {},'.format(r[0], r[2], r[3]) for r in rl if r[0] != 'All']) + '\n'
+#        print("Resstring: {}".format(resstring))
+        metriclist = list(itertools.zip_longest(*[r.split() for ri, r in enumerate(zrl[4]) if zrl[0][ri] != 'All'], fillvalue = ''))
+#        print("Metriclist: {}".format(metriclist))
+
+##    with open('/home/ttsesm/Desktop/blender_tests/inline_test/resstring.data', 'wb') as filehandle:
+##        # store the data as binary data stream
+##        pickle.dump(resstring, filehandle)
+##        
+##    with open('/home/ttsesm/Desktop/blender_tests/inline_test/metriclist.data', 'wb') as filehandle:
+##        # store the data as binary data stream
+##        pickle.dump(metriclist, filehandle)
+
+#    for ml in metriclist:
+#        resstring += ''.join(['{},'.format(m) for m in ml]) + '\n'
+
+
+#    resstring += '\n'
+    
+    # resstring holds the header information for each object, which is 6 different fields, i.e. (X, Y, Z, Areas, Illuminance, Visible Irradiance)
+    # we split them in order to seperate the corresponding fields for each object
+    c = re.findall(",".join(["[^,]+"] * 6), resstring)
+    a = np.array([np.array(x.split(',')) for x in c]).flatten().reshape(1,-1)
+    
+    # metriclist holds the actual estimated values for of the fields 
+    # we transform metriclist to array
+    b = np.array(metriclist)
+    
+    # we merge them together
+    d = np.concatenate((a,b), axis=0)
+
+    # we rearrange the data blocks corresponding to each object row-wise (intially are arranged column-wise)
+#    e = np.concatenate(np.split(d, d.shape[1]/6, axis=1), axis=0)
+#    print(d.shape[1]/6)
+# or
+    e = np.vstack(d.reshape(d.shape[0], -1, 6).swapaxes(0, 1))
+    
+    # remove empty rows that were necessary in the column-wise arrangment
+    data = e[~np.all(e == '', axis=1)]
+
+    # add an extra column to use for labeling the light sources
+    n,m = data.shape # for generality
+    x = np.zeros((n,1))
+    data = np.hstack((x,data))
+
+    # save file to disk, notice the fmt= attribute which needs to be set to "%s", i.e. string since our data contain alphanumerical information
+    np.savetxt(filepath, data, fmt="%s", delimiter=',')
+
+#    with open(filepath, 'w') as csvfile:
+#        csvfile.write(resstring)
+    return {'FINISHED'}
 
             
 
@@ -193,12 +305,15 @@ if __name__ == "__main__":
             
 #        print("Room objects: {}".format(rooms))
 
+        # save project, otherwise Vi-Suite add on is not working
         bpy.ops.wm.save_as_mainfile(filepath="/home/ttsesm/Desktop/blender_tests/inline_test.blend")
+        # create node network architecture 
         node_tree = create_vi_suite_node_structure()
         
+        # if there are rooms, loop through
         if rooms:
             for i, room in enumerate(rooms):
-                if i == 0:
+                if i > 0:
                     continue
                 # find non active rooms
                 rooms2hide = rooms[:i]+rooms[i+1:]
@@ -213,10 +328,24 @@ if __name__ == "__main__":
     #                toggle_hide(room2hide.children)
     #                room2hide.hide_set(True)
                 
-                # map materials from wavefront prototype to radiance 
+                # create a dictionary where we will keep the faces information, i.e. indices and coordinates, that correspond to light sources
+                lightObjectFaces = {}
+                # map materials from wavefront prototype to radiance, and return info of the corresponding light sources
                 for obj in room.children:
-                    material_mapping(obj, LabelIdMapping.id_label_map[obj["category_id"]])
+                    areLights, lightCoords = material_mapping(obj, LabelIdMapping.id_label_map[obj["category_id"]])
+                    
+                    # if there are light sources, put them in dictionary
+                    if areLights:
+#                        lightObjectFaces[obj.name]["idxs"] = areLights
+#                        lightObjectFaces[obj.name]["coords"] = lightCoords
+                        lightObjectFaces[obj.name] = dict(zip(["idxs", "coords"],[areLights, lightCoords]))
+                    
+                print("Room name: {}".format(room.name))
+                for key, indices in lightObjectFaces.items():
+                    print(key, ": ", indices)
+                    print("Total No.: {}".format(len(indices["idxs"])))
             
+                # overide and export corresponding nodes in order to apply simulation
                 override = {'node': bpy.data.node_groups[node_tree.name].nodes['LiVi Context']}
                 bpy.ops.node.liexport(override, 'INVOKE_DEFAULT')
                 override = {'node': bpy.data.node_groups[node_tree.name].nodes['LiVi Geometry']}
@@ -225,6 +354,11 @@ if __name__ == "__main__":
                 bpy.ops.node.livicalc(override, 'INVOKE_DEFAULT')
 #                override = {'node': bpy.data.node_groups[node_tree.name].nodes['VI CSV Export'], 'filename': "tessstttt"}
 #                bpy.ops.node.csvexport(override, 'INVOKE_DEFAULT')
+                
+                # save results
+                filename = "/home/ttsesm/Desktop/blender_tests/inline_test/" + room.name + ".csv"
+                export_simulation(node_tree.nodes["LiVi Simulation"], filename, lightObjectFaces)
+
         
     finally:
         # Revert back to previous view
