@@ -267,15 +267,16 @@ def export_simulation(node, filepath, lightObjectFaces=None):
 
 if __name__ == "__main__":
     # Make sure the current script directory is in PATH, so we can load other python modules
-    print("bpy path: {}".format(bpy.context.space_data.text.filepath))
+#    print("bpy path: {}".format(bpy.context.space_data.text.filepath))
     working_dir = os.path.dirname(bpy.context.space_data.text.filepath) + "/../"
     
     
 #    arg0 = "/home/ttsesm/Development/datasets/suncg/house/001ef7e63573bd8fecf933f10fa4491b/house.json"
-    arg0 = "/home/ttsesm/Development/datasets/suncg/house/0021bc159ae531d156df042af23872f1/house.json"
-    arg1 = "examples/suncg_with_vi_suite/output"
+#    arg0 = "/home/ttsesm/Development/datasets/suncg/house/0021bc159ae531d156df042af23872f1/house.json"
+#    arg0 = "/home/ttsesm/Development/datasets/suncg/house/0016652bf7b3ec278d54e0ef94476eb8/house.json"
+#    arg1 = "/home/ttsesm/Development/BlenderProc/examples/suncg_with_vi_suite/output/"
     
-    print("Working dir: {}".format(working_dir))
+#    print("Working dir: {}".format(working_dir))
 
     if not working_dir in sys.path:
         sys.path.append(working_dir)
@@ -330,8 +331,12 @@ if __name__ == "__main__":
                 break
                     
     scenes_list = glob.glob("/home/ttsesm/Development/datasets/suncg/house/*/")
+#    print("Scenes files list: {}".format(house_files))
     
     for i in range(len(scenes_list)):
+        # skip scenes
+        if i < 32:
+            continue
 
         # find all the .json files
         house_files = glob.glob(scenes_list[i]+"*.json")
@@ -369,7 +374,7 @@ if __name__ == "__main__":
                 bpy.ops.wm.save_as_mainfile(filepath=arg1+"house.blend", relative_remap = False)
                 # create node network architecture 
                 node_tree = create_vi_suite_node_structure()
-                
+                        
                 # if there are rooms, loop through
                 if rooms:
                     for k, room in enumerate(rooms):
