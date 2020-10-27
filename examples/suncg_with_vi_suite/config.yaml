@@ -1,4 +1,4 @@
-# Args: <cam_file> <obj_file> <output_dir>
+# Args: <obj_file> <output_dir>
 {
   "version": 3,
   "setup": {
@@ -13,7 +13,8 @@
       "module": "main.Initializer",
       "config": {
         "global": {
-          "output_dir": "examples/suncg_with_vi_suite/output"
+#          "output_dir": "examples/suncg_with_vi_suite/output"
+          "output_dir": "<args:1>"
         }
       }
     },
@@ -28,7 +29,8 @@
       "module": "loader.SuncgLoader",
       "config": {
         #"path": "/home/theodore/Development/datasets/suncg/house/001ef7e63573bd8fecf933f10fa4491b/house.json"
-        "path": "/home/ttsesm/Development/datasets/suncg/house/001ef7e63573bd8fecf933f10fa4491b/house.json"
+#        "path": "/home/ttsesm/Development/datasets/suncg/house/001ef7e63573bd8fecf933f10fa4491b/house.json"
+        "path": "<args:0>"
       }
     },
     {

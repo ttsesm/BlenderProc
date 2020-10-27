@@ -8,6 +8,7 @@ import numpy as np
 import itertools
 import pickle
 import re
+import glob
 
 def toggle_hide (lst, mode=True):
 
@@ -233,6 +234,27 @@ def export_simulation(node, filepath, lightObjectFaces=None):
     n,m = data.shape # for generality
     x = np.zeros((n,1))
     data = np.hstack((x,data))
+    
+    # label faces which correspond to light sources
+    for key, faces in lightObjectFaces.items():
+#        print("Object: {}".format(key))
+        
+        # find corresponding position of lighting objects
+        f=np.frompyfunc(lambda x: x.find(' ' + key + ' '), 1,1)
+        f=np.frompyfunc(lambda x: ' ' + key + ' ' in x, 1,1)
+        rows, cols = np.where(f(data))
+        # or
+        # rows, cols = np.where(np.char.find(data, 'Ceiling#0_0')>=0)
+
+        # assign faces corresponding to light sources to 1, 0 otherwise
+        # TODO: 1 should possibly change to the actual light intensity
+        if np.all(rows == rows[0]):
+#            print("Line: {}".format(rows[0]))
+            data[rows[0]][0] = "e_vec"
+            line_positions = faces["idxs"] + rows[0] + 1
+            for i, line_position in enumerate(line_positions):
+                if np.array_equal(np.round(faces["coords"][i], 3), data[line_position][1:4].astype(np.float)):
+                    data[line_position][0] = 1
 
     # save file to disk, notice the fmt= attribute which needs to be set to "%s", i.e. string since our data contain alphanumerical information
     np.savetxt(filepath, data, fmt="%s", delimiter=',')
@@ -245,9 +267,15 @@ def export_simulation(node, filepath, lightObjectFaces=None):
 
 if __name__ == "__main__":
     # Make sure the current script directory is in PATH, so we can load other python modules
+    print("bpy path: {}".format(bpy.context.space_data.text.filepath))
     working_dir = os.path.dirname(bpy.context.space_data.text.filepath) + "/../"
     
-#    print("Working dir: {}".format(working_dir))
+    
+#    arg0 = "/home/ttsesm/Development/datasets/suncg/house/001ef7e63573bd8fecf933f10fa4491b/house.json"
+    arg0 = "/home/ttsesm/Development/datasets/suncg/house/0021bc159ae531d156df042af23872f1/house.json"
+    arg1 = "examples/suncg_with_vi_suite/output"
+    
+    print("Working dir: {}".format(working_dir))
 
     if not working_dir in sys.path:
         sys.path.append(working_dir)
@@ -263,10 +291,23 @@ if __name__ == "__main__":
 #    print("Packages path: {}".format(packages_path))
 #    packages_path = "/home/theodore/Development/BlenderProc/blender/blender-2.83.6-linux64/custom-python-packages/"
     sys.path.append(packages_path)
+    
+#    scenes_list = glob.glob("/home/ttsesm/Development/datasets/suncg/house/*/")
+#    
+#    for i in range(len(scenes_list)):
 
-    # Delete all loaded models inside src/, as they are cached inside blender
+#        # find all the .json files
+#        house_files = glob.glob(scenes_list[i]+"*.json")
+#        
+#        for j in range(len(house_files)):
+#        
+#            arg0 = house_files[j]
+#            arg1 = scenes_list[i]+"blend_output/"
+
+    # Delete all loaded modules inside src/, as they are cached inside blender
     for module in list(sys.modules.keys()):
         if module.startswith("src"):
+            print("Module to be deleted: {}".format(module))
             del sys.modules[module]
 
     from src.main.Pipeline import Pipeline
@@ -275,6 +316,8 @@ if __name__ == "__main__":
     import src.utility.BlenderUtility
 
     config_path = "examples/suncg_with_vi_suite/config.yaml"
+    # create an object label id mapper
+    LabelIdMapping.assign_mapping(Utility.resolve_path(os.path.join(working_dir, 'resources', 'id_mappings', 'nyu_idset.csv')))
 
     # Focus the 3D View, this is necessary to make undo work (otherwise undo will focus on the scripting area)
     for window in bpy.context.window_manager.windows:
@@ -285,84 +328,110 @@ if __name__ == "__main__":
                 override = {'window': window, 'screen': screen, 'area': area}
                 bpy.ops.screen.screen_full_area(override)
                 break
-
-    try:
-        # In this debug case the rendering is avoided, everything is executed except the final render step
-        # For the RgbRenderer the undo is avoided to have a direct way of rendering in debug
-        pipeline = Pipeline(config_path, [], working_dir, avoid_rendering=True)
-        pipeline.run()
-        
-        # create an object label id mapper
-        LabelIdMapping.assign_mapping(Utility.resolve_path(os.path.join('resources', 'id_mappings', 'nyu_idset.csv')))
-        
-#        # find rooms by name
-#        rooms = [o for o in bpy.data.objects
-#            if 'Room' in o.name]
-            
-        # find rooms by type    
-        rooms = [o for o in bpy.data.objects
-            if "type" in o and o["type"] == 'Room']
-            
-#        print("Room objects: {}".format(rooms))
-
-        # save project, otherwise Vi-Suite add on is not working
-        bpy.ops.wm.save_as_mainfile(filepath="/home/ttsesm/Desktop/blender_tests/inline_test.blend")
-        # create node network architecture 
-        node_tree = create_vi_suite_node_structure()
-        
-        # if there are rooms, loop through
-        if rooms:
-            for i, room in enumerate(rooms):
-                if i > 0:
-                    continue
-                # find non active rooms
-                rooms2hide = rooms[:i]+rooms[i+1:]
-
-                # unhide room to be processed
-                room.hide_children = False
-    #            toggle_hide(room.children, False)
-    #            room.hide_set(False)
-                
-                for room2hide in rooms2hide:
-                    room2hide.hide_children = True
-    #                toggle_hide(room2hide.children)
-    #                room2hide.hide_set(True)
-                
-                # create a dictionary where we will keep the faces information, i.e. indices and coordinates, that correspond to light sources
-                lightObjectFaces = {}
-                # map materials from wavefront prototype to radiance, and return info of the corresponding light sources
-                for obj in room.children:
-                    areLights, lightCoords = material_mapping(obj, LabelIdMapping.id_label_map[obj["category_id"]])
                     
-                    # if there are light sources, put them in dictionary
-                    if areLights:
-#                        lightObjectFaces[obj.name]["idxs"] = areLights
-#                        lightObjectFaces[obj.name]["coords"] = lightCoords
-                        lightObjectFaces[obj.name] = dict(zip(["idxs", "coords"],[areLights, lightCoords]))
-                    
-                print("Room name: {}".format(room.name))
-                for key, indices in lightObjectFaces.items():
-                    print(key, ": ", indices)
-                    print("Total No.: {}".format(len(indices["idxs"])))
-            
-                # overide and export corresponding nodes in order to apply simulation
-                override = {'node': bpy.data.node_groups[node_tree.name].nodes['LiVi Context']}
-                bpy.ops.node.liexport(override, 'INVOKE_DEFAULT')
-                override = {'node': bpy.data.node_groups[node_tree.name].nodes['LiVi Geometry']}
-                bpy.ops.node.ligexport(override, 'INVOKE_DEFAULT')
-                override = {'node': bpy.data.node_groups[node_tree.name].nodes['LiVi Simulation']}
-                bpy.ops.node.livicalc(override, 'INVOKE_DEFAULT')
-#                override = {'node': bpy.data.node_groups[node_tree.name].nodes['VI CSV Export'], 'filename': "tessstttt"}
-#                bpy.ops.node.csvexport(override, 'INVOKE_DEFAULT')
-                
-                # save results
-                filename = "/home/ttsesm/Desktop/blender_tests/inline_test/" + room.name + ".csv"
-                export_simulation(node_tree.nodes["LiVi Simulation"], filename, lightObjectFaces)
+    scenes_list = glob.glob("/home/ttsesm/Development/datasets/suncg/house/*/")
+    
+    for i in range(len(scenes_list)):
 
+        # find all the .json files
+        house_files = glob.glob(scenes_list[i]+"*.json")
         
-    finally:
-        # Revert back to previous view
-        bpy.ops.screen.back_to_previous()
+        for j in range(len(house_files)):
+        
+            arg0 = house_files[j]
+            arg1 = scenes_list[i]+"blend_output/"
+            
+
+            try:
+                # In this debug case the rendering is avoided, everything is executed except the final render step
+                # For the RgbRenderer the undo is avoided to have a direct way of rendering in debug
+                pipeline = Pipeline(config_path, [arg0, arg1], working_dir, avoid_rendering=False)
+                pipeline.run()
+                
+                # filter out objects that are not belonging to a room
+                # aparently in SUNCG there are objects that do not belong to any room structure
+                for o in bpy.data.objects:
+                    if "type" in o and o["type"] == 'Object' and o.parent["type"] != 'Room':
+                        o.hide_children = True
+                
+        #        # find rooms by name
+        #        rooms = [o for o in bpy.data.objects
+        #            if 'Room' in o.name]
+                    
+                # find rooms by type    
+                rooms = [o for o in bpy.data.objects
+                    if "type" in o and o["type"] == 'Room']
+                    
+        #        print("Room objects: {}".format(rooms))
+
+                # save project, otherwise Vi-Suite add on is not working
+                os.makedirs(arg1, exist_ok=True)
+                bpy.ops.wm.save_as_mainfile(filepath=arg1+"house.blend", relative_remap = False)
+                # create node network architecture 
+                node_tree = create_vi_suite_node_structure()
+                
+                # if there are rooms, loop through
+                if rooms:
+                    for k, room in enumerate(rooms):
+                        
+#                        # skip rooms
+#                        if k > 0:
+#                            continue
+                        
+                        # find non active rooms
+                        rooms2hide = rooms[:k]+rooms[k+1:]
+
+                        # unhide room to be processed
+                        room.hide_children = False
+            #            toggle_hide(room.children, False)
+            #            room.hide_set(False)
+                        
+                        for room2hide in rooms2hide:
+                            room2hide.hide_children = True
+            #                toggle_hide(room2hide.children)
+            #                room2hide.hide_set(True)
+                        
+                        # create a dictionary where we will keep the faces information, i.e. indices and coordinates, that correspond to light sources
+                        lightObjectFaces = {}
+                        # map materials from wavefront prototype to radiance, and return info of the corresponding light sources
+                        for obj in room.children:
+                            areLights, lightCoords = material_mapping(obj, LabelIdMapping.id_label_map[obj["category_id"]])
+                            
+                            # if there are light sources, put them in dictionary
+                            if areLights:
+        #                        lightObjectFaces[obj.name]["idxs"] = areLights
+        #                        lightObjectFaces[obj.name]["coords"] = lightCoords
+                                lightObjectFaces[obj.name] = dict(zip(["idxs", "coords"],[areLights, lightCoords]))
+                            
+        #                print("Room name: {}".format(room.name))
+        #                for key, indices in lightObjectFaces.items():
+        #                    print(key, ": ", indices)
+        #                    print("Total No.: {}".format(len(indices["idxs"])))
+                    
+                        # overide and export corresponding nodes in order to apply simulation
+                        override = {'node': bpy.data.node_groups[node_tree.name].nodes['LiVi Context']}
+                        bpy.ops.node.liexport(override, 'INVOKE_DEFAULT')
+                        override = {'node': bpy.data.node_groups[node_tree.name].nodes['LiVi Geometry']}
+                        bpy.ops.node.ligexport(override, 'INVOKE_DEFAULT')
+                        override = {'node': bpy.data.node_groups[node_tree.name].nodes['LiVi Simulation']}
+                        bpy.ops.node.livicalc(override, 'INVOKE_DEFAULT')
+        #                override = {'node': bpy.data.node_groups[node_tree.name].nodes['VI CSV Export'], 'filename': "tessstttt"}
+        #                bpy.ops.node.csvexport(override, 'INVOKE_DEFAULT')
+                        
+                        # save results
+                        filepath = arg1 + "light_sim/"
+                        os.makedirs(filepath, exist_ok=True)
+                        filename = filepath + room.name + ".csv"
+                        export_simulation(node_tree.nodes["LiVi Simulation"], filename, lightObjectFaces)
+
+                
+            finally:
+
+                print('FINISHED')
+                
+    # Revert back to previous view
+    bpy.ops.screen.back_to_previous()
+
 
 # how to access object by name
 # bpy.data.objects["Room#0_0"].hide_children()
