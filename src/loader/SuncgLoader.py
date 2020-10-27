@@ -127,32 +127,45 @@ class SuncgLoader(LoaderInterface):
         By default the house is loaded in a different position than the origin of the plane
 
         This moves the house in plane origin
+        This is a combination of the solutions given in https://blender.stackexchange.com/questions/195228/place-objects-on-the-center-of-the-ground-plane-and-maintain-structure-via-pytho
         """
+        
+        # Choose the axis you want to center on
+        center_x = True
+        center_y = True
+        center_z = False
+   
         obs = [o for o in bpy.data.objects
             if o.type == 'MESH']
-            
-            
-#        print("Obs content: {}".format(obs))
-            
-        # put them in the center of the plane
+        
+        # get coordinates of each object bounding box center
         coords = []
         for o in obs:
             coords.extend(o.matrix_world @ Vector(b) for b in o.bound_box) 
 
-        x, y, z = np.array(coords).reshape((-1, 3)).T
+
+        # Calculate overall center
+        center = sum([c for c in coords], Vector()) / len(coords)
+
+        # Keep axis you want
+        center.x = center.x if center_x else 0
+        center.y = center.y if center_y else 0
+        center.z = center.z if center_z else 0
 
         global_xy_trans = Vector(
             (
-                (x.min() + x.max()) / 2 , 
-                (y.min() + y.max()) / 2
+                center.x, 
+                center.y
                 )
             )
 
 
-        for o in obs:      
+        for o in obs:
+            
             if o.parent in obs:
                 continue
             o.matrix_world.translation.xy -= global_xy_trans
+
             
     def _subdivide_objects(self):
         """
