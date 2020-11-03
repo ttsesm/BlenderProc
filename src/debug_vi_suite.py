@@ -34,7 +34,8 @@ def toggle_hide (lst, mode=True):
         for child in children_list:
 #            print ("going deeper")
             toggle_hide (child)
-            
+    
+# TODO: needs to be optimized            
 def material_mapping(obj, type):
     
     lightFaces = []
@@ -272,8 +273,8 @@ if __name__ == "__main__":
     
     
 #    arg0 = "/home/ttsesm/Development/datasets/suncg/house/001ef7e63573bd8fecf933f10fa4491b/house.json"
-#    arg0 = "/home/ttsesm/Development/datasets/suncg/house/0021bc159ae531d156df042af23872f1/house.json"
-#    arg0 = "/home/ttsesm/Development/datasets/suncg/house/0016652bf7b3ec278d54e0ef94476eb8/house.json"
+##    arg0 = "/home/ttsesm/Development/datasets/suncg/house/0021bc159ae531d156df042af23872f1/house.json"
+##    arg0 = "/home/ttsesm/Development/datasets/suncg/house/0016652bf7b3ec278d54e0ef94476eb8/house.json"
 #    arg1 = "/home/ttsesm/Development/BlenderProc/examples/suncg_with_vi_suite/output/"
     
 #    print("Working dir: {}".format(working_dir))
@@ -334,9 +335,9 @@ if __name__ == "__main__":
 #    print("Scenes files list: {}".format(house_files))
     
     for i in range(len(scenes_list)):
-        # skip scenes
-        if i < 32:
-            continue
+#        # skip scenes
+#        if i < 32:
+#            continue
 
         # find all the .json files
         house_files = glob.glob(scenes_list[i]+"*.json")
@@ -357,6 +358,9 @@ if __name__ == "__main__":
                 # aparently in SUNCG there are objects that do not belong to any room structure
                 for o in bpy.data.objects:
                     if "type" in o and o["type"] == 'Object' and o.parent["type"] != 'Room':
+                        o.hide_children = True
+                        
+                    if 'Ground' in o.name:
                         o.hide_children = True
                 
         #        # find rooms by name
@@ -431,7 +435,10 @@ if __name__ == "__main__":
 
                 
             finally:
-
+                log_file = '/home/ttsesm/Development/datasets/suncg/log.txt'
+        #        if os.path.exists(log_file):
+                with open(log_file, 'a') as file:
+                    file.write(scenes_list[i]+"\n")
                 print('FINISHED')
                 
     # Revert back to previous view
